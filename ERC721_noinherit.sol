@@ -1,23 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-import "./IERC721.sol";
-import "./IERC165.sol";
-import "./IERC721TokenReciever.sol";
-
 contract ERC721 {
 
     // for onERC721Received() function 
     //event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
 
-    event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
-    event Approval(address indexed _owner, address indexed _approved, uint256 indexed _tokenId);
-    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
-    
     mapping(address => uint256) private balances;
     mapping(uint256 => address) private _owners; // owner of a tokenId
     mapping(uint256 => address) public _getApproved;
     mapping(address => mapping (address => bool)) public approvalOfOperator;
+
+    event Transfer(address indexed _from, address indexed _to, uint256 _value);
+    event Approval(address indexed _owner, address indexed _spender, uint256 _value);
+    event ApprovalForAll(address indexed _owner, address indexed _spender, bool _value);
 
     
     /// balanceOf returns the amount of NFTs a user has minted/owns. Is deducted or added when a user transfers or mints.
@@ -42,6 +38,10 @@ contract ERC721 {
         transferFrom(from, to, tokenId);
         emit Transfer(from, to, tokenId);
 
+        if(isContract(to) == true){
+
+            receiver(to).onERC721Received(msg.sender, from, tokenId);
+        }
     }
     function transferFrom(address from, address to, uint256 tokenId) public payable {
         require(_owners[tokenId] == msg.sender || approvalOfOperator[from][msg.sender] == true || _getApproved[tokenId] == msg.sender, "msg.sender is not operator/owner/approved for tokenId");
@@ -51,7 +51,6 @@ contract ERC721 {
         if (to != address(0)) {
             balances[to] += 1;
         }
-        // onERC721Received(msg.sender, from, tokenId);
         emit Transfer(from, to, tokenId);
     }
 
@@ -80,4 +79,14 @@ contract ERC721 {
     function supportsInterface(bytes4 interfaceID) external pure returns (bool) {
         return interfaceID == 0x01ffc9a7 || interfaceID == 0x80ac58cd || interfaceID == 0x150b7a02;
     }
+
+    function isContract(address account) internal view returns (bool) {
+
+        return account.code.length > 0;
+    }
+}
+
+interface receiver{
+
+    function onERC721Received(address _operator, address _from, uint256 _tokenId) external returns(bytes4);
 }
