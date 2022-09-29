@@ -73,6 +73,7 @@ abstract contract ERC721 is IERC721, IERC165 {
         return approvalOfOperator[_owner][_operator];
     }
 
+    
     function supportsInterface(bytes4 interfaceID) external pure returns (bool) {
         return interfaceID == 0x01ffc9a7 || interfaceID == 0x80ac58cd || interfaceID == 0x150b7a02;
     }
