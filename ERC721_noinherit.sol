@@ -5,11 +5,15 @@ import "./IERC721.sol";
 import "./IERC165.sol";
 import "./IERC721TokenReciever.sol";
 
-abstract contract ERC721 is IERC721, IERC165 {
+contract ERC721 {
 
     // for onERC721Received() function 
     //event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
 
+    event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
+    event Approval(address indexed _owner, address indexed _approved, uint256 indexed _tokenId);
+    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
+    
     mapping(address => uint256) private balances;
     mapping(uint256 => address) private _owners; // owner of a tokenId
     mapping(uint256 => address) public _getApproved;
@@ -17,7 +21,7 @@ abstract contract ERC721 is IERC721, IERC165 {
 
     
     /// balanceOf returns the amount of NFTs a user has minted/owns. Is deducted or added when a user transfers or mints.
-    function balanceOf(address _owner) external override view returns (uint256) {
+    function balanceOf(address _owner) external view returns (uint256) {
         require(_owner != address(0), "Zero address is invalid");
         return balances[_owner];
     }
@@ -47,7 +51,7 @@ abstract contract ERC721 is IERC721, IERC165 {
         if (to != address(0)) {
             balances[to] += 1;
         }
-        //onERC721Received(msg.sender, from, tokenId);
+        // onERC721Received(msg.sender, from, tokenId);
         emit Transfer(from, to, tokenId);
     }
 
