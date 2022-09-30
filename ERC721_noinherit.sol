@@ -8,7 +8,7 @@ import "./IERC721TokenReciever.sol";
 contract ERC721 {
 
     // for onERC721Received() function 
-    //event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
+    event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
 
     event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
     event Approval(address indexed _owner, address indexed _approved, uint256 indexed _tokenId);
@@ -20,17 +20,28 @@ contract ERC721 {
     mapping(address => mapping (address => bool)) public approvalOfOperator;
 
     
+
+    // checks if address is EOA or contract
+    function checkAddress(address _addr) public view returns (bool) {
+        uint length;
+        assembly {
+            length:= extcodesize(_addr)
+        }
+        return length > 0;
+    }
+
     /// balanceOf returns the amount of NFTs a user has minted/owns. Is deducted or added when a user transfers or mints.
     function balanceOf(address _owner) external view returns (uint256) {
         require(_owner != address(0), "Zero address is invalid");
         return balances[_owner];
     }
 
-    /** function onERC721Received(address _operator, address _from, uint256 _tokenId) internal view returns (bytes4) {
+    function onERC721Received(address _operator, address _from, uint256 _tokenId) internal returns (bytes4) {
         emit Receipt(_operator, _from, _tokenId);
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
 
-    } **/
+    } 
+    
     function ownerOf(uint256 tokenId) external view returns (address) {
         // owner of tokenId == _owners[tokenId]
         require(_owners[tokenId] != address(0), "Zero addresses are invalid"); // if owner of tokenId is invalid, bad
@@ -51,7 +62,9 @@ contract ERC721 {
         if (to != address(0)) {
             balances[to] += 1;
         }
-        // onERC721Received(msg.sender, from, tokenId);
+        if (checkAddress(to) == true) {
+            to.onERC721Received(msg.sender, from, tokenId);
+        }
         emit Transfer(from, to, tokenId);
     }
 
