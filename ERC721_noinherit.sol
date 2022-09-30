@@ -8,7 +8,7 @@ contract ERC721 {
     event Response(bool success, bytes data);
 
     // for onERC721Received() function 
-    event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
+    
 
     // event params for interfaces
     event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
@@ -50,7 +50,7 @@ contract ERC721 {
         require(to != address(0), "Recipient address is invalid");
         transferFrom(from, to, tokenId);
         emit Transfer(from, to, tokenId);
-        if (checkAddress(to) == true) {
+        if (checkAddress(to)) {
             (bool success, bytes memory _data) = to.call(
                 abi.encodeWithSignature("onERC721Recieved(address, address, uint256, bytes)", msg.sender, from, tokenId, '0x')
             );
@@ -63,7 +63,7 @@ contract ERC721 {
         require(to != address(0), "Recipient address is invalid");
         transferFrom(from, to, tokenId);
         emit Transfer(from, to, tokenId);
-        if (checkAddress(to) == true) {
+        if (checkAddress(to)) {
             (bool success, bytes memory _data) = to.call(
                 abi.encodeWithSignature("onERC721Recieved(address, address, uint256, bytes)", msg.sender, from, tokenId, data)
             );
