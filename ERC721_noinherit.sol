@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-import "./IERC721.sol";
-import "./IERC165.sol";
-import "./IERC721TokenReciever.sol";
+
 
 contract ERC721 {
     // low level call event
@@ -12,19 +10,21 @@ contract ERC721 {
     // for onERC721Received() function 
     event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
 
+    // event params for interfaces
     event Transfer(address indexed _from, address indexed _to, uint256 indexed _tokenId);
     event Approval(address indexed _owner, address indexed _approved, uint256 indexed _tokenId);
     event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
+
     
     mapping(address => uint256) private balances;
     mapping(uint256 => address) private _owners; // owner of a tokenId
-    mapping(uint256 => address) public _getApproved;
+    mapping(uint256 => address) public getApproved;
     mapping(address => mapping (address => bool)) public approvalOfOperator;
 
-    
+
 
     // checks if address is EOA or contract
-    function checkAddress(address _addr) public view returns (bool) {
+    function checkAddress(address _addr) internal view returns (bool) {
         uint length;
         assembly {
             length:= extcodesize(_addr)
@@ -39,22 +39,23 @@ contract ERC721 {
     }
 
 
-    
+
     function ownerOf(uint256 tokenId) external view returns (address) {
         // owner of tokenId == _owners[tokenId]
         require(_owners[tokenId] != address(0), "Zero addresses are invalid"); // if owner of tokenId is invalid, bad
         return _owners[tokenId];
     }
-    
+
     function safeTransferFrom(address from, address to, uint256 tokenId) external payable { // safeTransferFrom, no data
         require(to != address(0), "Recipient address is invalid");
         transferFrom(from, to, tokenId);
         emit Transfer(from, to, tokenId);
         if (checkAddress(to) == true) {
-            (bool success, bytes memory data) = to.call(
+            (bool success, bytes memory _data) = to.call(
                 abi.encodeWithSignature("onERC721Recieved(address, address, uint256, bytes)", msg.sender, from, tokenId, '0x')
             );
-            emit Response(success, data);
+            require(success);
+            emit Response(success, _data);
         }
     }
 
@@ -66,12 +67,13 @@ contract ERC721 {
             (bool success, bytes memory _data) = to.call(
                 abi.encodeWithSignature("onERC721Recieved(address, address, uint256, bytes)", msg.sender, from, tokenId, data)
             );
+            require(success);
             emit Response(success, _data);
         }
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public payable {
-        require(_owners[tokenId] == msg.sender || approvalOfOperator[from][msg.sender] == true || _getApproved[tokenId] == msg.sender, "msg.sender is not operator/owner/approved for tokenId");
+        require(_owners[tokenId] == msg.sender || approvalOfOperator[from][msg.sender] == true || getApproved[tokenId] == msg.sender, "msg.sender is not operator/owner/approved for tokenId");
         require(_owners[tokenId] == from, "Sender does not own such tokenId");
         balances[from] -= 1;
 
@@ -85,7 +87,7 @@ contract ERC721 {
 
     function approve(address _approved, uint256 tokenId) public payable {
         require(_owners[tokenId] == msg.sender, "Caller is not owner of tokenId");
-        _getApproved[tokenId] == _approved;
+        getApproved[tokenId] == _approved;
         emit Approval(msg.sender, _approved, tokenId);
     }
 
