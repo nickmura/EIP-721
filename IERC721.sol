@@ -87,7 +87,8 @@ interface IERC721 {
     /// @dev Throws if `_tokenId` is not a valid NFT.
     /// @param _tokenId The NFT to find the approved address for
     /// @return The approved address for this NFT, or the zero address if there is none
-    function getApproved(uint256 _tokenId) external view returns (address);
+    /// I made this a mapping instead.
+    //  function getApproved(uint256 _tokenId) external view returns (address);
 
     /// @notice Query if an address is an authorized operator for another address
     /// @param _owner The address that owns the NFTs

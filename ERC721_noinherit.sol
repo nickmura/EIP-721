@@ -6,6 +6,8 @@ import "./IERC165.sol";
 import "./IERC721TokenReciever.sol";
 
 contract ERC721 {
+    // low level call event
+    event Response(bool success, bytes data);
 
     // for onERC721Received() function 
     event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
@@ -36,11 +38,7 @@ contract ERC721 {
         return balances[_owner];
     }
 
-    function onERC721Received(address _operator, address _from, uint256 _tokenId) internal returns (bytes4) {
-        emit Receipt(_operator, _from, _tokenId);
-        return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
 
-    } 
     
     function ownerOf(uint256 tokenId) external view returns (address) {
         // owner of tokenId == _owners[tokenId]
@@ -48,12 +46,30 @@ contract ERC721 {
         return _owners[tokenId];
     }
     
-    function safeTransferFrom(address from, address to, uint256 tokenId) external payable {
+    function safeTransferFrom(address from, address to, uint256 tokenId) external payable { // safeTransferFrom, no data
         require(to != address(0), "Recipient address is invalid");
         transferFrom(from, to, tokenId);
         emit Transfer(from, to, tokenId);
-
+        if (checkAddress(to) == true) {
+            (bool success, bytes memory data) = to.call(
+                abi.encodeWithSignature("onERC721Recieved(address, address, uint256, bytes)", msg.sender, from, tokenId, '0x')
+            );
+            emit Response(success, data);
+        }
     }
+
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) external payable { // safeTransferFrom, with data
+        require(to != address(0), "Recipient address is invalid");
+        transferFrom(from, to, tokenId);
+        emit Transfer(from, to, tokenId);
+        if (checkAddress(to) == true) {
+            (bool success, bytes memory _data) = to.call(
+                abi.encodeWithSignature("onERC721Recieved(address, address, uint256, bytes)", msg.sender, from, tokenId, data)
+            );
+            emit Response(success, _data);
+        }
+    }
+
     function transferFrom(address from, address to, uint256 tokenId) public payable {
         require(_owners[tokenId] == msg.sender || approvalOfOperator[from][msg.sender] == true || _getApproved[tokenId] == msg.sender, "msg.sender is not operator/owner/approved for tokenId");
         require(_owners[tokenId] == from, "Sender does not own such tokenId");
@@ -62,9 +78,7 @@ contract ERC721 {
         if (to != address(0)) {
             balances[to] += 1;
         }
-        if (checkAddress(to) == true) {
-            IERC721TokenReceiver(to).onERC721Received(msg.sender, from, tokenId, '0x');
-        }
+
         emit Transfer(from, to, tokenId);
     }
 
