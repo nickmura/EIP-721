@@ -6,9 +6,10 @@ import "./IERC165.sol";
 import "./IERC721TokenReciever.sol";
 
 abstract contract ERC721 is IERC721, IERC165 {
-
+    
     // for onERC721Received() function 
-    //event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
+    event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
+
 
     mapping(address => uint256) private balances;
     mapping(uint256 => address) private _owners; // owner of a tokenId
@@ -16,17 +17,28 @@ abstract contract ERC721 is IERC721, IERC165 {
     mapping(address => mapping (address => bool)) public approvalOfOperator;
 
     
+
+    // checks if address is EOA or contract
+    function checkAddress(address _addr) public view returns (bool) {
+        uint length;
+        assembly {
+            length:= extcodesize(_addr)
+        }
+        return length > 0;
+    }
+
     /// balanceOf returns the amount of NFTs a user has minted/owns. Is deducted or added when a user transfers or mints.
-    function balanceOf(address _owner) external override view returns (uint256) {
+    function balanceOf(address _owner) external view returns (uint256) {
         require(_owner != address(0), "Zero address is invalid");
         return balances[_owner];
     }
 
-    /** function onERC721Received(address _operator, address _from, uint256 _tokenId) internal view returns (bytes4) {
+    function onERC721Received(address _operator, address _from, uint256 _tokenId) internal returns (bytes4) {
         emit Receipt(_operator, _from, _tokenId);
         return bytes4(keccak256("onERC721Received(address,address,uint256,bytes)"));
 
-    } **/
+    } 
+    
     function ownerOf(uint256 tokenId) external view returns (address) {
         // owner of tokenId == _owners[tokenId]
         require(_owners[tokenId] != address(0), "Zero addresses are invalid"); // if owner of tokenId is invalid, bad
@@ -47,7 +59,9 @@ abstract contract ERC721 is IERC721, IERC165 {
         if (to != address(0)) {
             balances[to] += 1;
         }
-        //onERC721Received(msg.sender, from, tokenId);
+        if (checkAddress(to) == true) {
+            IERC721TokenReceiver(to).onERC721Received(msg.sender, from, tokenId, '0x');
+        }
         emit Transfer(from, to, tokenId);
     }
 

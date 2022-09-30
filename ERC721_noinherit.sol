@@ -63,7 +63,7 @@ contract ERC721 {
             balances[to] += 1;
         }
         if (checkAddress(to) == true) {
-            to.onERC721Received(msg.sender, from, tokenId);
+            IERC721TokenReceiver(to).onERC721Received(msg.sender, from, tokenId, '0x');
         }
         emit Transfer(from, to, tokenId);
     }
