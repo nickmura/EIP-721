@@ -16,13 +16,13 @@ event Receipt(address indexed _operator, address indexed _from, uint256 indexed 
 
 mapping(address => uint256) private balances;
 mapping(uint256 => address) private _owners; // owner of a tokenId
-mapping(uint256 => address) public _getApproved;
+mapping(uint256 => address) public getApproved;
 mapping(address => mapping (address => bool)) public approvalOfOperator;
 
 
 
 // checks if address is EOA or contract
-function checkAddress(address _addr) public view returns (bool) {
+function checkAddress(address _addr) internal view returns (bool) {
     uint length;
     assembly {
         length:= extcodesize(_addr)
@@ -52,24 +52,27 @@ function safeTransferFrom(address from, address to, uint256 tokenId) external pa
         (bool success, bytes memory data) = to.call(
             abi.encodeWithSignature("onERC721Recieved(address, address, uint256, bytes)", msg.sender, from, tokenId, '0x')
         );
+        require(success);
         emit Response(success, data);
     }
 }
 
 function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) external payable { // safeTransferFrom, with data
-    require(to != address(0), "Recipient address is invalid");
-    transferFrom(from, to, tokenId);
-    emit Transfer(from, to, tokenId);
     if (checkAddress(to) == true) {
         (bool success, bytes memory _data) = to.call(
             abi.encodeWithSignature("onERC721Recieved(address, address, uint256, bytes)", msg.sender, from, tokenId, data)
         );
         emit Response(success, _data);
+    if (success) {
+        require(to != address(0), "Recipient address is invalid");
+        transferFrom(from, to, tokenId);
+        emit Transfer(from, to, tokenId);
     }
+  }
 }
 
 function transferFrom(address from, address to, uint256 tokenId) public payable {
-    require(_owners[tokenId] == msg.sender || approvalOfOperator[from][msg.sender] == true || _getApproved[tokenId] == msg.sender, "msg.sender is not operator/owner/approved for tokenId");
+    require(_owners[tokenId] == msg.sender || approvalOfOperator[from][msg.sender] == true || getApproved[tokenId] == msg.sender, "msg.sender is not operator/owner/approved for tokenId");
     require(_owners[tokenId] == from, "Sender does not own such tokenId");
     balances[from] -= 1;
 
@@ -83,7 +86,7 @@ function transferFrom(address from, address to, uint256 tokenId) public payable 
 
 function approve(address _approved, uint256 tokenId) public payable {
     require(_owners[tokenId] == msg.sender, "Caller is not owner of tokenId");
-    _getApproved[tokenId] == _approved;
+    getApproved[tokenId] == _approved;
     emit Approval(msg.sender, _approved, tokenId);
 }
 
