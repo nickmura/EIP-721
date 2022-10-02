@@ -10,7 +10,7 @@ contract ERC721 is IERC721, IERC165 {
     event Response(bool success, bytes data);
 
     // for onERC721Received() function 
-    event Receipt(address indexed _operator, address indexed _from, uint256 indexed _tokenId);
+   
 
 
 
@@ -54,6 +54,7 @@ contract ERC721 is IERC721, IERC165 {
             );
             require(success);
             emit Response(success, _data);
+
         }
     }
 
@@ -73,12 +74,15 @@ contract ERC721 is IERC721, IERC165 {
     function transferFrom(address from, address to, uint256 tokenId) public payable {
         require(_owners[tokenId] == msg.sender || approvalOfOperator[from][msg.sender] == true || getApproved[tokenId] == msg.sender, "msg.sender is not operator/owner/approved for tokenId");
         require(_owners[tokenId] == from, "Sender does not own such tokenId");
-        balances[from] -= 1;
 
-        if (to != address(0)) {
+        unchecked {
+            balances[from] -= 1;
             balances[to] += 1;
         }
 
+
+        _owners[tokenId] = to; // transfers ownership
+        
         emit Transfer(from, to, tokenId);
     }
 
@@ -99,12 +103,85 @@ contract ERC721 is IERC721, IERC165 {
         emit ApprovalForAll(msg.sender, _operator, _approved);
     }
 
-
     function isApprovedForAll(address _owner, address _operator) external view returns (bool) {
         return approvalOfOperator[_owner][_operator];
     }
+
+
+    function _safeMint(address to, uint256 tokenId) internal virtual { //_safeMint with no data parameter.
+        _safeMint(to, tokenId, "");
+    }
+
+    function _safeMint(address to, uint256 tokenId, bytes memory data ) internal virtual {
+        _mint(to, tokenId);
+        if (checkAddress(to)) { // calls onERC721Recieved
+            (bool success, bytes memory _data) = to.call(
+                abi.encodeWithSignature("onERC721Recieved(address, address, uint256, bytes)", address(0), to, tokenId, data)
+            );
+            require(success);
+            emit Response(success, _data);
+        }
+    }
+
+    function _mint(address to, uint256 tokenId) internal virtual {
+        require(to != address(0), "Minting to a zero address is invalid");
+        require(!_exists(tokenId), "Token is already minted");
+        unchecked {
+            balances[to] += 1;
+        }
+        _owners[tokenId] = to;
+        emit Transfer(address(0), to, tokenId);
+        
+    }
+
+    /**
+     * @dev Hook that is called before any (single) token transfer. This includes minting and burning.
+     * See {_beforeConsecutiveTokenTransfer}.
+     *
+     * Calling conditions:
+     *
+     * - When `from` and `to` are both non-zero, ``from``'s `tokenId` will be
+     * transferred to `to`.
+     * - When `from` is zero, `tokenId` will be minted for `to`.
+     * - When `to` is zero, ``from``'s `tokenId` will be burned.
+     * - `from` and `to` are never both zero.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     */
+     function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal virtual {}
+
+    /**
+     * @dev Hook that is called after any (single) transfer of tokens. This includes minting and burning.
+     * See {_afterConsecutiveTokenTransfer}.
+     *
+     * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero.
+     * - `from` and `to` are never both zero.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     */
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId
+    ) internal virtual {}
+
+    /**function isTokenMinted(address to, uint256 tokenId) internal {
+        require(_tokenowner[tokenId] == address(0));
+    }**/
+
+    function _exists(uint256 tokenId) internal view virtual returns (bool) {
+        return _owners[tokenId] != address(0);
+    }
+
 
     function supportsInterface(bytes4 interfaceID) external pure returns (bool) {
         return interfaceID == 0x01ffc9a7 || interfaceID == 0x80ac58cd || interfaceID == 0x150b7a02;
     }
 }
+
